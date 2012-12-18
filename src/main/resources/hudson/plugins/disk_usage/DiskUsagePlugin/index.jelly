@@ -23,26 +23,42 @@
 
      <h1><img src="${resURL}/plugin/disk-usage/icons/diskusage48.png" /> ${%Disk usage} </h1>
 
-     <j:set var="projects" value="${it.getProjectList()}" />     
+     <j:set var="filter" value="${request.getParameter('filter')}" />
+     <j:set var="filterUnit" value="${request.getParameter('unit')}" />
+     <j:set var="projects" value="${it.getProjectList(filter, filterUnit)}" />  
+     <j:new var="calendar" className="java.util.GregorianCalendar" />
+     <f:form action="" method="post">
+         <input type="text" name="filter" value="${filter}"/>
+         <select name="unit">
+           <option value="${calendar.DAY_OF_YEAR}" selection="${filterUnit.equals(String.valueOf(calendar.DAY_OF_YEAR)) or filterUnit==null}">day</option>
+           <option value="${calendar.WEEK_OF_YEAR}" selection="${filterUnit.equals(String.valueOf(calendar.WEEK_OF_YEAR))}">week</option>  
+           <option value="${calendar.MONTH}" selection="${filterUnit.equals(String.valueOf(calendar.MONTH))}">month</option> 
+         </select>
+         <input name="submit" type="submit" value="Filter"/>
+     </f:form>
+     <br/>
+     <br/>
      
      <!-- sum of values -->
      <j:set var="diskUsageSum" value="${it.diskUsageSum}" />
      
-     <b>${%Builds}: </b>${diskUsageSum.getBuildUsageString()}, <b> ${%Workspace}: </b>${diskUsageSum.getWsUsageString()}<br/><p/>
+     <b>${%Builds}: </b>${diskUsageSum.getBuildUsageString()}, <b> ${%Workspace}: </b>${diskUsageSum.getWsUsageString()}, <b> ${%Locked builds}: </b>${diskUsageSum.getLockedBuildUsageString()}, <b> ${%Unlocked builds}: </b>${diskUsageSum.getUnlockedBuildUsageString()}<br/><p/>
      
      <!-- project table -->
      <table id="projectstatus" class="sortable pane bigtable">
       <tr>
-        <th>${%Project name}</th> <th>${%Builds}</th> <th>${%Workspace}</th>
+        <th>${%Project name}</th> <th>${%Builds}</th> <th>${%Workspace}</th> <th>${%Locked builds}</th> <th>${%Unlocked builds}</th>
       </tr>
 
       <j:forEach var="p" items="${projects}">
         <tr>
           <td><b><a href="${it.getProjectUrl(p)}">${p.getFullName()}</a></b> </td>
           
-          <j:set var="usage" value="${it.getDiskUsage(p)}" />
+          <j:set var="usage" value="${it.getDiskUsage(p, filter, filterUnit)}" />
           <td data="${usage.getBuildUsage()}">${usage.getBuildUsageString()}</td>
           <td data="${usage.getWsUsage()}">${usage.getWsUsageString()}</td>
+          <td data="${usage.getLockedBuildUsage()}">${usage.getLockedBuildUsageString()}</td>
+          <td data="${usage.getUnlockedBuildUsage()}">${usage.getUnlockedBuildUsageString()}</td>
         </tr>
       </j:forEach>
       
@@ -52,6 +68,8 @@
         <td data="~~~"><b>${%Total}</b> </td>
         <td data="${diskUsageSum.getBuildUsage()}"><b>${diskUsageSum.getBuildUsageString()}</b></td>
         <td data="${diskUsageSum.getWsUsage()}"><b>${diskUsageSum.getWsUsageString()}</b></td>
+        <td data="${diskUsageSum.getLockedBuildUsage()}">${diskUsageSum.getLockedBuildUsageString()}</td>
+        <td data="${diskUsageSum.getUnlockedBuildUsage()}">${diskUsageSum.getUnlockedBuildUsageString()}</td>
       </tr>
     </table>
     

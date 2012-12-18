@@ -10,6 +10,7 @@ import hudson.util.Graph;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
 
@@ -31,11 +32,15 @@ public class ProjectDiskUsageAction extends DiskUsageAction {
         return "disk-usage";
     }
     
+    public DiskUsage getDiskUsage(){
+        return getDiskUsage(null);
+    }
+    
     /**
      * @return Disk usage for all builds
      */
-    public DiskUsage getDiskUsage() {
-        DiskUsage du = new DiskUsage(0, 0);
+    public DiskUsage getDiskUsage(Calendar calendar) {
+        DiskUsage du = new DiskUsage(0, 0, 0);
 
         if (project != null) {
             BuildDiskUsageAction action = null;
@@ -43,17 +48,19 @@ public class ProjectDiskUsageAction extends DiskUsageAction {
             while ((action == null) && buildIterator.hasNext()) {
                 action = buildIterator.next().getAction(BuildDiskUsageAction.class);
             }
-            if (action != null) {
-                DiskUsage bdu = action.getDiskUsage();
+            if (action != null && (calendar==null || action.build.getTimestamp().before(calendar))) {
+                BuildDiskUsage bdu = action.getDiskUsage();
                 //Take last available workspace size
                 du.wsUsage = bdu.getWsUsage();
                 du.buildUsage += bdu.getBuildUsage();
+                du.lockedBuildUsage += action.build.isKeepLog() ? bdu.getBuildUsage() : 0;
             }
 
             while (buildIterator.hasNext()) {
                 action = buildIterator.next().getAction(BuildDiskUsageAction.class);
-                if (action != null) {
+                if (action != null && (calendar==null || action.build.getTimestamp().before(calendar))) {
                     du.buildUsage += action.getDiskUsage().getBuildUsage();
+                    du.lockedBuildUsage += action.build.isKeepLog()? action.getDiskUsage().getBuildUsage() : 0;
                 }
             }
             
@@ -86,9 +93,10 @@ public class ProjectDiskUsageAction extends DiskUsageAction {
         for (AbstractBuild build : project.getBuilds()) {
             BuildDiskUsageAction dua = build.getAction(BuildDiskUsageAction.class);
             if (dua != null) {
-                DiskUsage usage = dua.getDiskUsage();
+                BuildDiskUsage usage = dua.getDiskUsage();
                 maxValue = Math.max(maxValue, Math.max(usage.wsUsage, usage.getBuildUsage()));
-                usages.add(new Object[]{build, usage.wsUsage, usage.getBuildUsage()});
+                long lockedBuild = build.isKeepLog() ? usage.getBuildUsage() : 0;
+                usages.add(new Object[]{build, usage.wsUsage, usage.getBuildUsage(), lockedBuild, usage.getBuildUsage() - lockedBuild});
             }
         }
 
@@ -100,6 +108,8 @@ public class ProjectDiskUsageAction extends DiskUsageAction {
             NumberOnlyBuildLabel label = new NumberOnlyBuildLabel((AbstractBuild) usage[0]);
             dsb.add(((Long) usage[1]) / base, "workspace", label);
             dsb.add(((Long) usage[2]) / base, "build", label);
+            dsb.add(((Long) usage[3]) / base, "locked build", label);
+            dsb.add(((Long) usage[4]) / base, "unlocked build", label);
         }
 
 		return new DiskUsageGraph(dsb.build(), unit);

@@ -14,21 +14,21 @@ import java.util.List;
  */
 public class BuildDiskUsageAction extends DiskUsageAction implements BuildBadgeAction {
 
-    DiskUsage diskUsage;
+    BuildDiskUsage diskUsage;
     AbstractBuild build;
 
     public BuildDiskUsageAction(AbstractBuild build, long wsUsage, long buildUsage) {
-        diskUsage = new DiskUsage(buildUsage, wsUsage);
+        diskUsage = new BuildDiskUsage(buildUsage, wsUsage);
         this.build = build;
     }
 
     /**
      * @return Disk usage of the build (included child builds)
      */
-    public DiskUsage getDiskUsage() {
-        DiskUsage du = (diskUsage != null) ? 
-            new DiskUsage(diskUsage.buildUsage, diskUsage.wsUsage) :
-            new DiskUsage(0,0);
+    public BuildDiskUsage getDiskUsage() {
+        BuildDiskUsage du = (diskUsage != null) ? 
+            new BuildDiskUsage(diskUsage.buildUsage, diskUsage.wsUsage) :
+            new BuildDiskUsage(0,0);
 
         for (AbstractBuild child : getChildBuilds(build)) {
             BuildDiskUsageAction bdua = child.getAction(BuildDiskUsageAction.class);

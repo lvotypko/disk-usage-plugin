@@ -32,11 +32,12 @@ public class DiskUsageOvearallGraphGenerator extends PeriodicWork {
 	protected void doRun() throws Exception {
         List<AbstractProject> projectList = DiskUsagePlugin.addAllProjects(Hudson.getInstance(), new ArrayList<AbstractProject>());
 
-		DiskUsage sum = new DiskUsage(0, 0);
+		DiskUsage sum = new DiskUsage(0, 0, 0);
         for(AbstractProject project: projectList) {
             DiskUsage du = DiskUsagePlugin.getDiskUsage(project);
             sum.buildUsage += du.buildUsage;
             sum.wsUsage += du.wsUsage;
+            sum.lockedBuildUsage += du.lockedBuildUsage;
         }
 
 		DiskUsageProjectActionFactory.DESCRIPTOR.history.add(new DiskUsageRecord(sum));
@@ -49,7 +50,7 @@ public class DiskUsageOvearallGraphGenerator extends PeriodicWork {
 		Date date;
 
 		public DiskUsageRecord(DiskUsage du){
-			super(du.buildUsage, du.wsUsage);
+			super(du.buildUsage, du.wsUsage, du.lockedBuildUsage);
 			date = new Date(){
 				private static final long serialVersionUID = 1L;
 				@Override

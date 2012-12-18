@@ -5,13 +5,16 @@ import hudson.Plugin;
 import hudson.Util;
 import hudson.model.*;
 import hudson.util.DataSetBuilder;
+import hudson.util.FormValidation;
 import hudson.util.Graph;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 import javax.servlet.ServletException;
 import org.kohsuke.stapler.StaplerRequest;
@@ -52,16 +55,30 @@ public class DiskUsagePlugin extends Plugin {
         }
     }
     
+    
+    public static DiskUsage getDiskUsage(Job project){
+        return getDiskUsage(project, null, null);
+    }
+    
     /**
      * @return DiskUsage for given project (shortcut for the view). Never null.
      */
-    public static DiskUsage getDiskUsage(Job project) {
+    public static DiskUsage getDiskUsage(Job project, String filter, String unit) {
+        Calendar calendar = null;
+        if((filter!=null && filter.matches("\\d+")) && (unit!=null && unit.matches("\\d+"))){
+            int count = Integer.parseInt(filter);
+            int index = Integer.parseInt(unit);
+            calendar = new GregorianCalendar();
+            System.out.println("pred " + calendar.getTime());
+            calendar.set(index, calendar.get(index)-count);
+            System.out.println("po " + calendar.getTime());
+        }
         ProjectDiskUsageAction action = project.getAction(ProjectDiskUsageAction.class);
         if (action != null) {
-            return action.getDiskUsage();
+            return action.getDiskUsage(calendar);
         }
         
-        return new DiskUsage(0, 0);
+        return new DiskUsage(0, 0, 0);
     }
     
     //Another shortcut
@@ -69,10 +86,14 @@ public class DiskUsagePlugin extends Plugin {
         return Util.encode(project.getAbsoluteUrl());
     }
     
+    public static List getProjectList(){
+        return getProjectList(null, null);
+    }
+    
     /**
      * @return Project list sorted by occupied disk space
      */
-    public static List getProjectList() {
+    public static List getProjectList(String filter, String unit) {
         Comparator<AbstractProject> comparator = new Comparator<AbstractProject>() {
 
             public int compare(AbstractProject o1, AbstractProject o2) {
@@ -87,16 +108,16 @@ public class DiskUsagePlugin extends Plugin {
                 return 0;
             }
         };
-
         List<AbstractProject> projectList = addAllProjects(Hudson.getInstance(), new ArrayList<AbstractProject>());
         Collections.sort(projectList, comparator);
         
         //calculate sum
-        DiskUsage sum = new DiskUsage(0, 0);
+        DiskUsage sum = new DiskUsage(0, 0, 0);
         for(AbstractProject project: projectList) {
-            DiskUsage du = getDiskUsage(project);
+            DiskUsage du = getDiskUsage(project, filter, unit);
             sum.buildUsage += du.buildUsage;
             sum.wsUsage += du.wsUsage;
+            sum.lockedBuildUsage += du.lockedBuildUsage;
         }
         
         diskUsageSum = sum;
@@ -149,6 +170,9 @@ public class DiskUsagePlugin extends Plugin {
 			Date label = usage.getDate();
             dsb.add(((Long) usage.getWsUsage()) / base, "workspace", label);
             dsb.add(((Long) usage.getBuildUsage()) / base, "build", label);
+            dsb.add(((Long) usage.getLockedBuildUsage()) / base, "locked build", label);
+            dsb.add(((Long) usage.getUnockedBuildUsage()) / base, "unlocked build", label);
+            
         }
 
 		return new DiskUsageGraph(dsb.build(), unit);

@@ -1,74 +1,36 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package hudson.plugins.disk_usage;
 
 /**
  *
- * @author dvrzalik
+ * @author Lucie Votypkova
  */
-public class DiskUsage {
-
-    long buildUsage = 0;
-    long wsUsage = 0;
-
-    public DiskUsage() {}
+public class DiskUsage extends BuildDiskUsage {
     
-    public DiskUsage(long buildDiskUsage,long wsDiskUsage) {
-        buildUsage = buildDiskUsage;
-        wsUsage = wsDiskUsage;
+    long lockedBuildUsage;
+    
+   public DiskUsage(long buildDiskUsage,long wsDiskUsage, long lockedBuildUsage) {
+        super(buildDiskUsage, wsDiskUsage);
+        this.lockedBuildUsage=lockedBuildUsage;
+    }
+   
+   public long getLockedBuildUsage() {
+        return lockedBuildUsage;
+    }
+
+    public String getLockedBuildUsageString() {
+        return getSizeString(lockedBuildUsage);
     }
     
-    public long getBuildUsage() {
-        return buildUsage;
+    public long getUnockedBuildUsage() {
+        return buildUsage - lockedBuildUsage;
     }
 
-    public long getWsUsage() {
-        return wsUsage;
+    public String getUnlockedBuildUsageString() {
+        return getSizeString(buildUsage - lockedBuildUsage);
     }
 
-    public String getBuildUsageString() {
-        return getSizeString(buildUsage);
-    }
-
-    public String getWsUsageString() {
-        return getSizeString(wsUsage);
-    }
-
-    public static final String getSizeString(Long size) {
-        if (size == null || size <= 0) {
-            return "-";
-        }
-
-        int floor = (int) getScale(size);
-        floor = Math.min(floor, 4);
-        double base = Math.pow(1024, floor);
-        String unit = getUnitString(floor);
-
-        return Math.round(size / base) + unit;
-    }
-
-    public static final double getScale(long number) {
-        return Math.floor(Math.log(number) / Math.log(1024));
-    }
-
-    public static String getUnitString(int floor) {
-        String unit = "";
-        switch (floor) {
-            case 0:
-                unit = "B";
-                break;
-            case 1:
-                unit = "KB";
-                break;
-            case 2:
-                unit = "MB";
-                break;
-            case 3:
-                unit = "GB";
-                break;
-            case 4:
-                unit = "TB";
-                break;
-        }
-
-        return unit;
-    }
 }
